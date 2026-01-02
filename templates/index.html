@@ -14,8 +14,19 @@
 </head>
 <body>
     <h1>Awaroot – dein Zustand</h1>
-    <p>Ein Eintrag pro Absenden – alles auf einen Blick.</p>
     
+    {% if chart_json %}
+    <h2>Trend</h2>
+    <div id="chart-div" style="width:100%; height:400px; margin: 30px 0;"></div>
+
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script>
+        const fig = {{ chart_json | safe }};
+        Plotly.newPlot('chart-div', fig.data, fig.layout, {responsive: true});
+    </script>
+    {% endif %}
+
+    <p>Ein Eintrag pro Absenden – alles auf einen Blick.</p>
     <form method="post">
         <label>Energie (1–10)</label>
         <input type="range" name="energie" min="1" max="10" value="5">
