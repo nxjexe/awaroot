@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Awaroot</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+        form { margin-bottom: 40px; }
+        label { display: block; margin: 10px 0 5px; }
+        input[type="range"] { width: 100%; }
+        .entries { border-top: 1px solid #ccc; padding-top: 20px; }
+        .entry { margin: 10px 0; padding: 10px; background: #f8f8f8; }
+    </style>
+</head>
+<body>
+    <h1>Awaroot – dein Zustand</h1>
+    <p>Ein Eintrag pro Absenden – alles auf einen Blick.</p>
+    
+    <form method="post">
+        <label>Energie (1–10)</label>
+        <input type="range" name="energie" min="1" max="10" value="5">
+        <span id="energie-value">5</span>
+
+        <label>Fokus (1–10)</label>
+        <input type="range" name="fokus" min="1" max="10" value="5">
+        <span id="fokus-value">5</span>
+
+        <label>Gefühl (1–10)</label>
+        <input type="range" name="gefuehl" min="1" max="10" value="5">
+        <span id="gefuehl-value">5</span>
+
+        <label>Gefühl (Freitext)</label>
+        <textarea name="gefuehls_text" rows="2" placeholder="z.B. überstimuliert-träge, schwerfällig und aufgebläht..." style="width:100%"></textarea>
+
+        <label>Kommentar (optional – Push/Bremse)</label>
+        <textarea name="kommentar" rows="3" placeholder="Was hat gepusht oder gebremst?" style="width:100%"></textarea>
+
+        <button type="submit">Speichern</button>
+    </form>
+
+    <h2>Letzte Einträge</h2>
+    <div class="entries">
+        {% if recent_groups %}
+            {% for ts, data in recent_groups %}
+            <div class="entry">
+                <strong>{{ ts }}</strong><br>
+                Energie: {{ data.get('Energie', '-') }}/10 &nbsp; 
+                Fokus: {{ data.get('Fokus', '-') }}/10 &nbsp;
+                Gefühl: {{ data.get('Gefühl', '–') }}/10 <br>
+                {% if data.get('Gefühlsbeschreibung') %}
+                Gefühlsbeschreibung: "{{ data.get('Gefühlsbeschreibung') }}"
+                {% endif %} <br>
+                {% if data.get('Kommentar') %}
+                Kommentar: "{{ data.get('Kommentar') }}"
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>Noch keine Einträge.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        // Slider-Werte live anzeigen
+        document.querySelectorAll('input[type=range]').forEach(slider => {
+            const output = document.getElementById(slider.name + '-value');
+            output.textContent = slider.value;
+            slider.addEventListener('input', () => output.textContent = slider.value);
+        });
+    </script>
+</body>
+</html>
