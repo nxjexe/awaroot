@@ -3,6 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <title>Awaroot</title>
+    <button onclick="document.body.classList.toggle('dark'); localStorage.setItem('darkMode', document.body.classList.contains('dark'))">
+        Dark Mode Toggle
+    </button>
+    <script>
+        // Beim Laden prüfen
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark');
+        }
+    </script>
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
         form { margin-bottom: 40px; }
@@ -10,6 +19,35 @@
         input[type="range"] { width: 100%; }
         .entries { border-top: 1px solid #ccc; padding-top: 20px; }
         .entry { margin: 10px 0; padding: 10px; background: #f8f8f8; }
+        :root {
+            --bg: white;
+            --text: black;
+            --entry-bg: #f8f8f8;
+            --border: #ccc;
+        }
+        body.dark {
+            --bg: #121212;
+            --text: #e0e0e0;
+            --entry-bg: #1e1e1e;
+            --border: #333;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.3s, color 0.3s;
+        }
+        input, textarea, button {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .entry {
+            background: var(--entry-bg);
+            border: 1px solid var(--border);
+        }
+        .entries {
+            border-top: 1px solid var(--border);
+        }
     </style>
 </head>
 <body>
@@ -46,7 +84,52 @@
         <label>Kommentar (optional – Push/Bremse)</label>
         <textarea name="kommentar" rows="3" placeholder="Was hat gepusht oder gebremst?" style="width:100%"></textarea>
 
-        <button type="submit">Speichern</button>
+        <details style="margin-top: 30px;">
+            <summary><strong>Tägliche Wurzeln (morgens eintragen)</strong></summary>
+            
+            <label>Sleep Score</label>
+            <input type="number" name="sleep_score" min="0" max="100" step="1">
+
+            <label>Schlafdauer (z.B. 8h 24m)</label>
+            <input type="text" name="schlafdauer" placeholder="8h 24m">
+
+            <label>Durchschn. HRV</label>
+            <input type="number" name="hrv" min="0" step="1">
+
+            <label>Rückengefühl (1–10)</label>
+            <input type="range" name="ruecken" min="1" max="10" value="5">
+            <span id="ruecken-value">5</span>
+
+            <label>Schritte Vortag</label>
+            <input type="number" name="schritte" min="0" step="1">
+
+            <label>Gewicht (kg)</label>
+            <input type="number" name="gewicht" min="0" step="0.1">
+
+            <label>Stunden gearbeitet</label>
+            <input type="number" name="stunden" step="0.1">
+        </details>
+
+        <details style="margin-top: 30px;">
+            <summary><strong>Abend-Reflexion</strong></summary>
+            
+            <label>Zufriedenheit mit Session (1–10)</label>
+            <input type="range" name="zufriedenheit" min="1" max="10" value="5">
+            <span id="zufriedenheit-value">5</span>
+        </details>
+
+        <script>
+            // Slider live anzeigen (wie die anderen)
+            const zufSlider = document.querySelector('input[name="zufriedenheit"]');
+            if (zufSlider) {
+                const output = document.getElementById('zufriedenheit-value');
+                output.textContent = zufSlider.value;
+                zufSlider.addEventListener('input', () => output.textContent = zufSlider.value);
+            }
+        </script>
+
+        <button type="submit">Speichern</button><br>
+        <input type="datetime-local" name="custom_timestamp">
     </form>
 
     <h2>Letzte Einträge</h2>
@@ -55,15 +138,49 @@
             {% for ts, data in recent_groups %}
             <div class="entry">
                 <strong>{{ ts }}</strong><br>
-                Energie: {{ data.get('Energie', '-') }}/10 &nbsp; 
-                Fokus: {{ data.get('Fokus', '-') }}/10 &nbsp;
-                Gefühl: {{ data.get('Gefühl', '–') }}/10 <br>
-                {% if data.get('Gefühlsbeschreibung') %}
-                Gefühlsbeschreibung: "{{ data.get('Gefühlsbeschreibung') }}"
-                {% endif %} <br>
-                {% if data.get('Kommentar') %}
-                Kommentar: "{{ data.get('Kommentar') }}"
+                {% if data.get('Zufriedenheit') is not none %}
+                    Zufriedenheit Session: {{ data.get('Zufriedenheit') }}/10 <br>
                 {% endif %}
+                {% if data.get('Energie') is not none %}
+                    Energie: {{ data.get('Energie', '-') }}/10 &nbsp;
+                {% endif %}
+                {% if data.get('Fokus') is not none %}
+                    Fokus: {{ data.get('Fokus', '-') }}/10 &nbsp;
+                {% endif %}
+                {% if data.get('Gefühl') is not none %}
+                    Gefühl: {{ data.get('Gefühl', '-') }}/10 <br>
+                {% endif %}
+                {% if data.get('Gefühlsbeschreibung') %}
+                    Gefühlsbeschreibung: "{{ data.get('Gefühlsbeschreibung') }}" <br>
+                {% endif %}
+                {% if data.get('Sleep Score') is not none %}
+                    Sleep Score: {{ data.get('Sleep Score', '-') }} &nbsp;
+                {% endif %}
+                {% if data.get('HRV') is not none %}
+                    HRV: {{ data.get('HRV', '-') }} &nbsp;
+                {% endif %}
+                {% if data.get('Rückengefühl') is not none %}
+                    Rückengefühl: {{ data.get('Rückengefühl', '-') }}/10 <br>
+                {% endif %}
+                {% if data.get('Schritte') is not none %}
+                    Schritte: {{ data.get('Schritte', '-') }} &nbsp;
+                {% endif %}
+                {% if data.get('Gewicht') is not none %}
+                    Gewicht: {{ data.get('Gewicht', '-') }} kg &nbsp;
+                {% endif %}
+                {% if data.get('Stunden gearbeitet') is not none %}
+                    Stunden gearbeitet: {{ data.get('Stunden gearbeitet', '-') }} h <br>
+                {% endif %}
+                {% if data.get('Schlafdauer') %}
+                    Schlafdauer: {{ data.get('Schlafdauer') }} <br>
+                {% endif %}
+                {% if data.get('Kommentar') %}
+                    Kommentar: "{{ data.get('Kommentar') }}"
+                {% endif %}
+                <form method="post" action="/delete">
+                    <input type="hidden" name="ts" value="{{ ts }}">
+                    <button>Löschen</button>
+                </form>
             </div>
             {% endfor %}
         {% else %}

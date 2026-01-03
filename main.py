@@ -41,6 +41,8 @@ def index():
         gefuehl = request.form.get('gefuehl')
         kommentar = request.form.get('kommentar', '').strip()
         gefuehls_text = request.form.get('gefuehls_text', '').strip()
+        custom_ts = request.form.get('custom_timestamp')
+        timestamp = custom_ts if custom_ts else datetime.now().isoformat()
 
         if energie:
             c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
@@ -57,6 +59,42 @@ def index():
         if gefuehls_text:
             c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
                       (timestamp, 'Gefühlsbeschreibung', None, gefuehls_text))
+
+        sleep_score = request.form.get('sleep_score')
+        schlafdauer = request.form.get('schlafdauer', '').strip()
+        hrv = request.form.get('hrv')
+        ruecken = request.form.get('ruecken')
+        schritte = request.form.get('schritte')
+        gewicht = request.form.get('gewicht')
+        stunden = request.form.get('stunden')
+
+        if sleep_score:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Sleep Score', int(sleep_score), ''))
+        if schlafdauer:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Schlafdauer', None, schlafdauer))
+        if hrv:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'HRV', int(hrv), ''))
+        if ruecken:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Rückengefühl', int(ruecken), ''))
+        if schritte:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Schritte', int(schritte), ''))
+        if gewicht:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Gewicht', float(gewicht), ''))
+        if stunden:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Stunden gearbeitet', float(stunden), ''))
+
+        zufriedenheit = request.form.get('zufriedenheit')
+
+        if zufriedenheit:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Zufriedenheit', int(zufriedenheit), ''))
 
         conn.commit()
         conn.close()
@@ -85,6 +123,22 @@ def index():
             grouped[full_ts]['Kommentar'] = note or ''
         elif cat == 'Gefühlsbeschreibung':
             grouped[full_ts]['Gefühlsbeschreibung'] = note or ''
+        elif cat == 'Zufriedenheit':
+            grouped[full_ts]['Zufriedenheit'] = val
+        elif cat == 'Sleep Score':
+            grouped[full_ts]['Sleep Score'] = val
+        elif cat == 'HRV':
+            grouped[full_ts]['HRV'] = val
+        elif cat == 'Rückengefühl':
+            grouped[full_ts]['Rückengefühl'] = val
+        elif cat == 'Schritte':
+            grouped[full_ts]['Schritte'] = val
+        elif cat == 'Gewicht':
+            grouped[full_ts]['Gewicht'] = val
+        elif cat == 'Stunden gearbeitet':
+            grouped[full_ts]['Stunden gearbeitet'] = val
+        elif cat == 'Schlafdauer':
+            grouped[full_ts]['Schlafdauer'] = note or ''
 
         # Für Charts: nur numerische Werte pro Datum sammeln (letzter Wert des Tages)
         if short_ts not in dates:
@@ -96,9 +150,9 @@ def index():
         # Wir nehmen einfach die letzten Werte pro Tag – simpel, aber effektiv
 
     # Für Charts: stunden-genaue Daten (letzter Wert pro Stunde)
-    hourly = defaultdict(lambda: {'Energie': None, 'Fokus': None, 'Gefühl': None})
+    hourly = defaultdict(lambda: {'Energie': None, 'Fokus': None, 'Gefühl': None, 'Zufriedenheit': None})
     for ts, cat, val, _ in all_entries:
-        if cat in ['Energie', 'Fokus', 'Gefühl']:
+        if cat in ['Energie', 'Fokus', 'Gefühl', 'Zufriedenheit']:
             hour_ts = ts[:13] + ":00"  # YYYY-MM-DD HH:00
             hourly[hour_ts][cat] = val  # überschreibt mit dem letzten Wert dieser Stunde
 
@@ -106,12 +160,14 @@ def index():
     energie_vals = [hourly[d].get('Energie', None) for d in dates]
     fokus_vals = [hourly[d].get('Fokus', None) for d in dates]
     gefuehl_vals = [hourly[d].get('Gefühl', None) for d in dates]
+    zuf_vals = [hourly[d].get('Zufriedenheit', None) for d in dates]  # oder hourly, je nach Normierung
 
     # Plotly Chart
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=dates, y=energie_vals, mode='lines+markers', name='Energie'))
     fig.add_trace(go.Scatter(x=dates, y=fokus_vals, mode='lines+markers', name='Fokus'))
     fig.add_trace(go.Scatter(x=dates, y=gefuehl_vals, mode='lines+markers', name='Gefühl'))
+    fig.add_trace(go.Scatter(x=dates, y=zuf_vals, mode='lines+markers', name='Zufriedenheit'))
     fig.update_layout(
         title='Dein Trend (stunden-genau)',
         xaxis_title='Zeit',
@@ -125,6 +181,16 @@ def index():
     recent_groups = sorted(grouped.items(), key=lambda x: x[0], reverse=True)[:20]
 
     return render_template('index.html', recent_groups=recent_groups, chart_json=chart_json)
+
+@app.route('/delete', methods=['POST'])
+def delete():
+    ts = request.form.get('ts')
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("DELETE FROM entries WHERE timestamp LIKE ?", (f"{ts[:16]}%",))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
