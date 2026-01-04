@@ -67,6 +67,10 @@ def index():
         schritte = request.form.get('schritte')
         gewicht = request.form.get('gewicht')
         stunden = request.form.get('stunden')
+        zufriedenheit = request.form.get('zufriedenheit')
+        boost = request.form.get('boost', '').strip()
+        bremse = request.form.get('bremse', '').strip()
+        selbstbehauptung = request.form.get('selbstbehauptung', '').strip()
 
         if sleep_score:
             c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
@@ -87,18 +91,27 @@ def index():
             c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
                     (timestamp, 'Gewicht', float(gewicht), ''))
         if stunden:
-            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
-                    (timestamp, 'Stunden gearbeitet', float(stunden), ''))
-
-        zufriedenheit = request.form.get('zufriedenheit')
-
+            try:
+                val = float(stunden)
+                c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                          (timestamp, 'Stunden gearbeitet', val, ''))
+            except ValueError:
+                pass  # ignoriere ungültig
         if zufriedenheit:
             c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
                     (timestamp, 'Zufriedenheit', int(zufriedenheit), ''))
+        if boost:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Boost', None, boost))
+        if bremse:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                    (timestamp, 'Bremse', None, bremse))
+        if selbstbehauptung:
+            c.execute("INSERT INTO entries (timestamp, category, value, note) VALUES (?, ?, ?, ?)",
+                      (timestamp, 'Selbstbehauptung', None, selbstbehauptung))
 
         conn.commit()
         conn.close()
-        return redirect(url_for('index'))
 
     # Daten laden und gruppieren (wie bisher)
     conn = sqlite3.connect(DB_NAME)
@@ -139,6 +152,10 @@ def index():
             grouped[full_ts]['Stunden gearbeitet'] = val
         elif cat == 'Schlafdauer':
             grouped[full_ts]['Schlafdauer'] = note or ''
+        elif cat == 'Boost':
+            grouped[full_ts]['Boost'] = note or ''
+        elif cat == 'Bremse':
+            grouped[full_ts]['Bremse'] = note or ''
 
         # Für Charts: nur numerische Werte pro Datum sammeln (letzter Wert des Tages)
         if short_ts not in dates:
